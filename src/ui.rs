@@ -6,15 +6,7 @@ use std::io::{self, Write};
 use std::str::FromStr;
 
 pub fn clear_screen() {
-    // Skip clearing in Docker or when NO_CLEAR env var is set
-    if std::env::var("NO_CLEAR").is_err() {
-        // Use ANSI escape codes for better compatibility
-        print!("\x1B[2J\x1B[1;1H");
-        io::stdout().flush().unwrap();
-    } else {
-        // Just add some spacing instead
-        println!("\n{}", "=".repeat(40));
-    }
+    clearscreen::clear().expect("failed to clear screen");
 }
 
 pub fn read_chess_position() -> ChessPosition {
