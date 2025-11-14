@@ -1,9 +1,3 @@
-Com certeza. Um bom arquivo `README.md` é essencial para qualquer projeto. Ele serve como o manual de instruções principal.
-
-Aqui está um `README.md` completo e bem formatado para o seu projeto de xadrez em Rust. Ele explica o que é o projeto, como compilá-lo e, mais importante, como jogar. Você pode criar um arquivo chamado `README.md` na pasta raiz do seu projeto e colar o texto abaixo nele.
-
----
-
 # Projeto de Xadrez em Rust (Versão Console)
 
 Este é um projeto de xadrez completo, jogável via linha de comando, desenvolvido em Rust. Ele implementa as regras padrão do xadrez, incluindo detecção de xeque e xeque-mate, e foi criado como uma tradução de um projeto originalmente feito em Java.
