@@ -83,14 +83,14 @@ Após inserir a origem, a tela será limpa e o tabuleiro será redesenhado. Todo
 O terminal então solicitará a posição de destino:
 
 ```
-8 ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜
-7 ♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟
-6  -   -    -   -   -   -    -   -
-5  -   -    -   -   -   -    -   -
-4  -   -    -   -   -   -    -   -
-3  -   -    -   -   -   -    -   -
-2 ♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙
-1 ♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖
+8 ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜ 
+7 ♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟ 
+6 - - - - - - - - 
+5 - - - - - - - - 
+4 - - - - - - - - 
+3 - - - - - - - - 
+2 ♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙ 
+1 ♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖ 
   a b c d e f g h
 
 Target: _
