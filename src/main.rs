@@ -1,73 +1,60 @@
+// src/main.rs
 mod board;
 mod chess;
 mod error;
 mod ui;
+mod network;
+mod server;
+mod client;
 
-use chess::ChessMatch;
-use std::io::{self, Write};
+use std::env;
+use chess::color::Color;
 
-fn main() {
-    let mut chess_match = ChessMatch::new();
+#[tokio::main]
+async fn main() {
+    let args: Vec<String> = env::args().collect();
 
-    // Loop principal do jogo, continua enquanto não houver xeque-mate.
-    while !chess_match.check_mate {
-        ui::clear_screen();
-        ui::print_match(&chess_match);
+    if args.len() < 2 {
+        println!("Usage:");
+        println!("  Run Server: cargo run -- server <address> (default: 127.0.0.1:8080)");
+        println!("  Run Client: cargo run -- client <color> <address>");
+        println!("Example: cargo run -- client white 127.0.0.1:8080");
+        return;
+    }
 
-        // Loop interno para o turno de um jogador.
-        // Ele só sai deste loop quando um movimento válido é feito.
-        loop {
-            print!("\nSource: ");
-            let source_input = ui::read_chess_position();
-            
-            // Tenta obter os movimentos possíveis para a peça de origem.
-            match chess_match.possible_moves(source_input.to_position()) {
-                // SUCESSO: A peça de origem é válida.
-                Ok(possible_moves) => {
-                    ui::clear_screen();
-                    ui::print_board(&chess_match.board, Some(possible_moves));
-                    
-                    print!("\nTarget: ");
-                    let target_input = ui::read_chess_position();
+    let mode = &args[1];
 
-                    // Tenta realizar o movimento.
-                    match chess_match.perform_chess_move(source_input, target_input) {
-                        // SUCESSO: O movimento completo foi válido.
-                        Ok(_) => {
-                            break; // Sai do loop do turno e passa para o próximo jogador.
-                        }
-                        // ERRO: O destino era inválido.
-                        Err(e) => {
-                            println!("\nError: {}", e);
-                            println!("Please try again, starting from the source position.");
-                            pause_for_user();
-                            // Continua no loop do turno para o jogador tentar de novo.
-                        }
-                    }
-                }
-                // ERRO: A peça de origem era inválida.
-                Err(e) => {
-                    println!("\nError: {}", e);
-                    pause_for_user();
-                    // Continua no loop do turno para o jogador tentar de novo.
-                }
+    match mode.as_str() {
+        "server" => {
+            let addr = if args.len() > 2 { &args[2] } else { "127.0.0.1:8080" };
+            if let Err(e) = server::run_server(addr).await {
+                eprintln!("Server error: {}", e);
             }
-            // Se chegamos aqui, foi por causa de um erro.
-            // O loop reiniciará, limpando a tela e mostrando o estado atual do jogo.
-            ui::clear_screen();
-            ui::print_match(&chess_match);
+        }
+        "client" => {
+            if args.len() < 3 {
+                println!("Please specify color: 'white' or 'black'");
+                return;
+            }
+            let color_str = &args[2].to_lowercase();
+            let color = match color_str.as_str() {
+                "white" => Color::White,
+                "black" => Color::Black,
+                _ => {
+                    println!("Invalid color. Use 'white' or 'black'.");
+                    return;
+                }
+            };
+            
+            // O endereço para o cliente é o 4º argumento (índice 3) ou default
+            let addr = if args.len() > 3 { &args[3] } else { "127.0.0.1:8080" };
+            
+            if let Err(e) = client::run_client_with_color(addr, color).await {
+                eprintln!("Client error: {}", e);
+            }
+        }
+        _ => {
+            println!("Invalid mode. Use 'server' or 'client'.");
         }
     }
-    
-    // O jogo acabou. Mostra o resultado final.
-    ui::clear_screen();
-    ui::print_match(&chess_match);
-}
-
-// Uma função auxiliar para pausar a execução até o usuário pressionar Enter.
-fn pause_for_user() {
-    print!("Press Enter to continue...");
-    io::stdout().flush().unwrap();
-    let mut buffer = String::new();
-    io::stdin().read_line(&mut buffer).unwrap();
 }
