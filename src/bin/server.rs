@@ -12,14 +12,14 @@ type MatchmakingQueue = Arc<Mutex<Option<TcpStream>>>;
 // A função principal agora é assíncrona, marcada com `#[tokio::main]`.
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    // 1. Inicia o listener TCP na porta 8080.
+    // Inicia o listener TCP na porta 8080.
     let listener = TcpListener::bind("127.0.0.1:8080").await?;
     println!("Chess server listening on 127.0.0.1:8080");
 
-    // 2. Cria a nossa fila de matchmaking compartilhada.
+    // Cria a nossa fila de matchmaking compartilhada.
     let waiting_player = Arc::new(Mutex::new(None));
 
-    // 3. Loop principal do servidor para aceitar conexões.
+    // Loop principal do servidor para aceitar conexões.
     loop {
         let (stream, addr) = listener.accept().await?;
         println!("Accepted new connection from: {}", addr);
@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         // Clona o `Arc` para que a nova task também tenha acesso à fila.
         let queue_clone = Arc::clone(&waiting_player);
 
-        // 4. Cria uma nova task para lidar com a lógica de matchmaking para este cliente.
+        // Cria uma nova task para lidar com a lógica de matchmaking para este cliente.
         tokio::spawn(async move {
             handle_connection(stream, queue_clone).await;
         });

@@ -1,57 +1,63 @@
-// src/main.rs
-mod board;
-mod chess;
-mod error;
-mod ui;
+// Usamos a biblioteca 'rust_chess' para ter acesso a toda a lógica do jogo
+use rust_chess::{chess::ChessMatch, ui};
+use std::io::{self, Write};
 
-use std::env;
-use chess::color::Color;
+// Função auxiliar para pausar a execução
+fn pause_for_user() {
+    print!("Press Enter to continue...");
+    io::stdout().flush().unwrap();
+    let mut buffer = String::new();
+    io::stdin().read_line(&mut buffer).unwrap();
+}
 
-#[tokio::main]
-async fn main() {
-    let args: Vec<String> = env::args().collect();
+fn main() {
+    // Declara os módulos que este binário específico usa.
+    // É importante notar que estamos usando o 'crate', que se refere à biblioteca.
+    use rust_chess::chess;
+    use rust_chess::ui;
 
-    if args.len() < 2 {
-        println!("Usage:");
-        println!("  Run Server: cargo run -- server <address> (default: 127.0.0.1:8080)");
-        println!("  Run Client: cargo run -- client <color> <address>");
-        println!("Example: cargo run -- client white 127.0.0.1:8080");
-        return;
-    }
+    let mut chess_match = ChessMatch::new();
 
-    let mode = &args[1];
+    // Loop principal do jogo, continua enquanto não houver xeque-mate.
+    while !chess_match.check_mate {
+        ui::clear_screen();
+        ui::print_match(&chess_match);
 
-    match mode.as_str() {
-        "server" => {
-            let addr = if args.len() > 2 { &args[2] } else { "127.0.0.1:8080" };
-            if let Err(e) = server::run_server(addr).await {
-                eprintln!("Server error: {}", e);
-            }
-        }
-        "client" => {
-            if args.len() < 3 {
-                println!("Please specify color: 'white' or 'black'");
-                return;
-            }
-            let color_str = &args[2].to_lowercase();
-            let color = match color_str.as_str() {
-                "white" => Color::White,
-                "black" => Color::Black,
-                _ => {
-                    println!("Invalid color. Use 'white' or 'black'.");
-                    return;
+        // Loop interno para o turno de um jogador.
+        loop {
+            print!("\nSource: ");
+            let source_input = ui::read_chess_position();
+            
+            match chess_match.possible_moves(source_input.to_position()) {
+                Ok(possible_moves) => {
+                    ui::clear_screen();
+                    ui::print_board(&chess_match.board, Some(possible_moves));
+                    
+                    print!("\nTarget: ");
+                    let target_input = ui::read_chess_position();
+
+                    match chess_match.perform_chess_move(source_input, target_input) {
+                        Ok(_) => {
+                            break; // Movimento válido, sai do loop do turno.
+                        }
+                        Err(e) => {
+                            println!("\nError: {}", e);
+                            println!("Please try again, starting from the source position.");
+                            pause_for_user();
+                        }
+                    }
                 }
-            };
-            
-            // O endereço para o cliente é o 4º argumento (índice 3) ou default
-            let addr = if args.len() > 3 { &args[3] } else { "127.0.0.1:8080" };
-            
-            if let Err(e) = client::run_client_with_color(addr, color).await {
-                eprintln!("Client error: {}", e);
+                Err(e) => {
+                    println!("\nError: {}", e);
+                    pause_for_user();
+                }
             }
-        }
-        _ => {
-            println!("Invalid mode. Use 'server' or 'client'.");
+            ui::clear_screen();
+            ui::print_match(&chess_match);
         }
     }
+    
+    // O jogo acabou. Mostra o resultado final.
+    ui::clear_screen();
+    ui::print_match(&chess_match);
 }
