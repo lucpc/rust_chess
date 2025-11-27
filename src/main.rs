@@ -3,9 +3,6 @@ mod board;
 mod chess;
 mod error;
 mod ui;
-mod network;
-mod server;
-mod client;
 
 use std::env;
 use chess::color::Color;

@@ -3,7 +3,7 @@ use crate::board::Board;
 use crate::chess::{color::Color, ChessMatch};
 use std::fmt;
 
-pub trait Piece: fmt::Display {
+pub trait Piece: fmt::Display + Send {
     fn color(&self) -> Color;
     fn move_count(&self) -> u32;
     fn increase_move_count(&mut self);
