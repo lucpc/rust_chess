@@ -1,113 +1,104 @@
-# Projeto de Xadrez em Rust (Versão Console)
+# Projeto de Xadrez em Rust
 
-Este é um projeto de xadrez completo, jogável via linha de comando, desenvolvido em Rust. Ele implementa as regras padrão do xadrez, incluindo detecção de xeque e xeque-mate, e foi criado como uma tradução de um projeto originalmente feito em Java.
+Este é um projeto de xadrez completo desenvolvido em Rust, criado como uma tradução de um projeto Java. Ele implementa as regras padrão do xadrez e oferece duas maneiras de jogar: localmente em um único computador ou online contra outro jogador em uma máquina diferente.
 
 ## Funcionalidades
 
-- **Interface Baseada em Texto:** Jogue uma partida de xadrez completa diretamente no seu terminal.
-- **Modo para Dois Jogadores:** Projetado para dois jogadores no mesmo computador ("hot-seat").
-- **Validação de Movimentos:** O sistema valida todos os movimentos de acordo com as regras do xadrez.
-- **Destaque de Movimentos:** Ao selecionar uma peça, o tabuleiro exibe todos os seus movimentos possíveis, facilitando a jogada.
-- **Detecção de Xeque e Xeque-Mate:** O jogo avisa quando um rei está em xeque e encerra a partida quando ocorre um xeque-mate, declarando o vencedor.
-- **Captura de Peças:** Mantém e exibe uma lista de todas as peças capturadas por cada jogador.
-- **Movimentos Especiais:** Implementa regras especiais como Roque (_Castling_) e _En Passant_.
+*   **Dois Modos de Jogo:** Jogue localmente ("hot-seat") ou online via rede (cliente/servidor).
+*   **Interface Baseada em Texto:** Jogue uma partida de xadrez completa diretamente no seu terminal.
+*   **Validação de Movimentos:** O sistema valida todos os movimentos de acordo com as regras do xadrez.
+*   **Destaque de Movimentos (Modo Local):** Ao selecionar uma peça no modo local, o tabuleiro exibe todos os seus movimentos possíveis.
+*   **Detecção de Xeque e Xeque-Mate:** O jogo avisa quando um rei está em xeque e encerra a partida quando ocorre um xeque-mate, declarando o vencedor.
+*   **Movimentos Especiais:** Implementa regras como Roque (*Castling*) e *En Passant*.
+*   **Visual com Emojis:** Utiliza caracteres Unicode (♔, ♛, ♜, ...) para uma representação visual agradável das peças.
 
 ## Pré-requisitos
 
 Para compilar e executar este projeto, você precisará ter o **Rust** instalado em seu sistema. A instalação inclui o compilador (`rustc`) e o gerenciador de pacotes (`cargo`).
 
-- A maneira recomendada de instalar o Rust é através do `rustup`. Você pode encontrar as instruções no site oficial: [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
+*   A maneira recomendada de instalar o Rust é através do `rustup`. Você pode encontrar as instruções no site oficial: [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
 
-## Como Compilar e Executar
+Para jogar online, os jogadores precisarão de um cliente TCP simples, como `telnet` ou `netcat` (`nc`), que geralmente vêm pré-instalados em sistemas Linux e macOS.
 
-1.  **Clone o Repositório** (ou simplesmente descompacte os arquivos em uma pasta):
+## Como Jogar: Duas Opções
 
-    ```bash
-    git clone https://github.com/lucpc/rust_chess
-    ```
+Este projeto oferece duas formas de jogar.
 
-2.  **Navegue até a Pasta do Projeto:**
+---
 
-    ```bash
-    cd nome-da-pasta-do-projeto
-    ```
+### Opção 1: Jogo Local (Dois Jogadores no Mesmo Computador)
 
-3.  **Compile e Execute o Jogo:**
-    Use o Cargo para compilar e rodar o projeto com um único comando. O Cargo irá baixar automaticamente as dependências (`colored`, `clearscreen`) na primeira vez.
+Neste modo, dois jogadores se revezam no mesmo terminal. O jogo oferece um fluxo em duas etapas com destaque de movimentos possíveis.
+
+#### Como Executar:
+
+1.  Navegue até a pasta raiz do projeto.
+2.  Execute o seguinte comando:
     ```bash
     cargo run
     ```
+    *(Isso é um atalho para `cargo run --bin rust_chess`)*
 
-O jogo será iniciado no seu terminal.
+#### Como Jogar:
 
-## Como Jogar
+1.  **Selecionar a Origem:** Quando solicitado (`Source:`), digite a coordenada da peça que você deseja mover (ex: `e2`) e pressione Enter.
+2.  **Visualizar Movimentos:** A tela será atualizada, e todos os movimentos legais para a peça selecionada serão destacados com um fundo azul.
+3.  **Selecionar o Destino:** Quando solicitado (`Target:`), digite a coordenada para onde você deseja mover a peça (ex: `e4`) e pressione Enter.
+4.  O turno passará para o próximo jogador.
 
-O jogo é controlado inteiramente por texto. Siga o fluxo abaixo para realizar suas jogadas.
+---
 
-### 1. Entendendo o Tabuleiro
+### Opção 2: Jogo Online (Dois Jogadores em Computadores Diferentes)
 
-O tabuleiro é exibido com as coordenadas padrão do xadrez:
+Neste modo, uma pessoa executa o programa do servidor, e dois jogadores se conectam a ele a partir de seus próprios terminais para jogar um contra o outro. O matchmaking é simples: o primeiro jogador a se conectar espera pelo segundo.
 
-- **Colunas:** `a` até `h`
-- **Linhas:** `1` até `8`
+#### Passo a Passo:
 
-As peças brancas são representadas por letras maiúsculas (R, N, B, Q, K, P) na cor branca/cinza, e as peças pretas na cor amarela.
+**A) Para a pessoa que vai hospedar o jogo (o "Host"):**
 
-### 2. O Fluxo de uma Jogada
+1.  **Inicie o Servidor:** Na pasta raiz do projeto, execute o seguinte comando:
+    ```bash
+    cargo run --bin server
+    ```
+    Você verá a mensagem: `Chess server listening on 127.0.0.1:8080`. O servidor agora está pronto para aceitar conexões.
+    *   **Nota:** Por padrão, o servidor só aceita conexões da sua própria máquina (`127.0.0.1`). Para permitir que jogadores de outras máquinas se conectem, veja a seção "Jogando Pela Internet" abaixo.
 
-A cada turno, o jogo irá te guiar pelo processo de mover uma peça:
+**B) Para os dois Jogadores:**
 
-**Passo 1: Selecionar a Peça de Origem**
+1.  **Abra seu terminal.**
 
-O terminal irá mostrar de quem é a vez e solicitar a posição da peça que você deseja mover:
+2.  **Conecte-se ao Servidor:** Use o comando `telnet` ou `netcat` com o endereço IP e a porta do servidor. Se estiver jogando na mesma máquina que o servidor, o comando é:
+    ```bash
+    telnet 127.0.0.1 8080
+    ```
+    *Se estiver jogando em outra máquina, substitua `127.0.0.1` pelo endereço IP do computador host.*
 
-```
-Turn : 1
-Waiting player: White
+3.  **Aguarde o Oponente:** O primeiro jogador a se conectar receberá a mensagem `MSG:Waiting for an opponent...`. Quando o segundo jogador se conectar, o jogo começará para ambos.
 
-Source: _
-```
+#### Como Jogar (Modo Online):
 
-Digite a coordenada da sua peça (ex: `e2` para mover o peão do rei branco na primeira jogada) e pressione **Enter**.
+O fluxo de jogo é em **uma única etapa**:
 
-**Passo 2: Selecionar a Posição de Destino**
+1.  O terminal mostrará de quem é a vez e solicitará o seu movimento (ex: `MSG:Your turn. (e.g., e2e4)`).
+2.  Você deve digitar o movimento completo, combinando a **origem** e o **destino** em uma única string de 4 caracteres (ex: `e2e4`) e pressionar Enter.
+3.  O tabuleiro será atualizado para ambos os jogadores, e o turno passará para o seu oponente.
 
-Após inserir a origem, a tela será limpa e o tabuleiro será redesenhado. Todos os movimentos legais para a peça que você selecionou serão destacados com um **fundo azul**.
+---
 
-O terminal então solicitará a posição de destino:
+### Jogando Pela Internet (Avançado)
 
-```
-8 ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜ 
-7 ♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟ 
-6 - - - - - - - - 
-5 - - - - - - - - 
-4 - - - - - - - - 
-3 - - - - - - - - 
-2 ♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙ 
-1 ♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖ 
-  a b c d e f g h
+Para permitir que jogadores fora da sua rede local (em computadores diferentes) se conectem, o host do servidor precisa fazer o seguinte:
 
-Target: _
-```
+1.  **Alterar o Código do Servidor:**
+    No arquivo `src/bin/server.rs`, altere a linha `TcpListener::bind` para ouvir em `0.0.0.0`, que significa "todos os endereços IP desta máquina":
+    ```rust
+    // Em src/bin/server.rs
+    let listener = TcpListener::bind("0.0.0.0:8080").await?;
+    ```
+    Isso permitirá conexões tanto da sua rede local quanto da internet.
 
-_(Neste exemplo, imagine que os movimentos possíveis da peça `e2` estão com fundo azul)_
+2.  **Encaminhamento de Porta (Port Forwarding):**
+    O host precisará configurar seu roteador de internet para encaminhar o tráfego da porta `8080` para o endereço IP local do computador que está rodando o servidor. Este processo varia de roteador para roteador.
 
-Digite a coordenada para onde você deseja mover a peça (ex: `e4`) e pressione **Enter**.
-
-**Passo 3: Fim do Turno**
-
-Se o movimento for válido, a peça será movida, o tabuleiro será atualizado e o turno passará para o próximo jogador. O ciclo então se repete.
-
-### 3. Notação de Posição
-
-Use a notação de xadrez padrão (notação algébrica) para inserir as posições:
-
-- Formato: `[letra da coluna][número da linha]`
-- Exemplos: `a1`, `h8`, `f5`.
-- Não use espaços e digite em letras minúsculas.
-
-### 4. Movimentos Especiais
-
-- **Roque (Castling):** Para fazer o roque, simplesmente mova o seu Rei duas casas para o lado desejado (ex: de `e1` para `g1`). O jogo moverá a Torre automaticamente para a posição correta.
-- **En Passant:** A captura _en passant_ é realizada movendo seu peão na diagonal para a casa vazia atrás do peão adversário que acabou de avançar duas casas.
-- **Promoção de Peão:** Quando um peão alcança a última fileira do tabuleiro, ele é promovido **automaticamente a uma Rainha (Queen)**.
+3.  **Compartilhar o IP Público:**
+    O host precisará encontrar e compartilhar seu endereço IP público (você pode encontrá-lo pesquisando "what is my ip" no Google) com o outro jogador. O jogador então se conectará usando esse IP público: `telnet <IP_PUBLICO_DO_HOST> 8080`.
