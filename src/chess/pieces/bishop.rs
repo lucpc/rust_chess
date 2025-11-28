@@ -10,7 +10,12 @@ pub struct Bishop {
     move_count: u32,
 }
 
-impl Bishop { pub fn new(color: Color) -> Self { Self { color, move_count: 0 } } }
+impl Bishop {
+    pub fn new(color: Color) -> Self {
+        Self { color, move_count: 0 }
+    }
+}
+
 impl fmt::Display for Bishop {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.color {
@@ -23,34 +28,42 @@ impl fmt::Display for Bishop {
 impl Piece for Bishop {
     fn color(&self) -> Color { self.color }
     fn move_count(&self) -> u32 { self.move_count }
-    fn increase_move_count(&mut self) { self.move_count += 1; }
-    fn decrease_move_count(&mut self) { self.move_count -= 1; }
+    fn increase_move_count(&mut self) { self.move_count += 1 }
+    fn decrease_move_count(&mut self) { self.move_count -= 1 }
     fn box_clone(&self) -> Box<dyn Piece> { Box::new(self.clone()) }
 
-    fn possible_moves(&self, board: &Board, pos: Position, _: &ChessMatch) -> Vec<Vec<bool>> {
+    fn possible_moves(&self, board: &Board, pos: Position, _: &ChessMatch)
+        -> Vec<Vec<bool>>
+    {
         let mut mat = vec![vec![false; board.cols]; board.rows];
-        let deltas = [(-1, -1), (-1, 1), (1, -1), (1, 1)]; // NW, NE, SW, SE
+        let deltas = [(-1,-1), (-1,1), (1,-1), (1,1)];
 
         for (dr, dc) in deltas {
-            let mut current_row = pos.row as isize;
-            let mut current_col = pos.col as isize;
+            let mut r = pos.row as isize;
+            let mut c = pos.col as isize;
+
             loop {
-                current_row += dr;
-                current_col += dc;
-                 if current_row < 0 || current_row >= board.rows as isize || current_col < 0 || current_col >= board.cols as isize {
+                r += dr; c += dc;
+
+                if r < 0 || c < 0 || r >= board.rows as isize || c >= board.cols as isize {
                     break;
                 }
-                let p = Position::new(current_row as usize, current_col as usize);
+
+                let p = Position::new(r as usize, c as usize);
+
                 if !board.there_is_a_piece(p) {
                     mat[p.row][p.col] = true;
-                } else {
-                    if self.is_there_opponent_piece(p, board) {
-                        mat[p.row][p.col] = true;
-                    }
-                    break;
+                    continue;
                 }
+
+                if self.is_there_opponent_piece(p, board) {
+                    mat[p.row][p.col] = true;
+                }
+
+                break;
             }
         }
+
         mat
     }
 }

@@ -1,45 +1,43 @@
-// Usamos a biblioteca 'rust_chess' para ter acesso a toda a lógica do jogo
 use rust_chess::{chess::ChessMatch, ui};
 use std::io::{self, Write};
 
-// Função auxiliar para pausar a execução
+/// Pausa execução aguardando Enter, mas sem panicar se der erro.
 fn pause_for_user() {
     print!("Press Enter to continue...");
-    io::stdout().flush().unwrap();
+
+    if let Err(e) = io::stdout().flush() {
+        eprintln!("Warning: could not flush stdout: {e}");
+    }
+
     let mut buffer = String::new();
-    io::stdin().read_line(&mut buffer).unwrap();
+
+    if let Err(e) = io::stdin().read_line(&mut buffer) {
+        eprintln!("Warning: failed to read user input: {e}");
+    }
 }
 
 fn main() {
-    // Declara os módulos que este binário específico usa.
-    // É importante notar que estamos usando o 'crate', que se refere à biblioteca.
-    use rust_chess::chess;
-    use rust_chess::ui;
-
     let mut chess_match = ChessMatch::new();
 
-    // Loop principal do jogo, continua enquanto não houver xeque-mate.
+    // Loop principal do jogo local
     while !chess_match.check_mate {
         ui::clear_screen();
         ui::print_match(&chess_match);
 
-        // Loop interno para o turno de um jogador.
         loop {
             print!("\nSource: ");
             let source_input = ui::read_chess_position();
-            
+
             match chess_match.possible_moves(source_input.to_position()) {
                 Ok(possible_moves) => {
                     ui::clear_screen();
                     ui::print_board(&chess_match.board, Some(possible_moves));
-                    
+
                     print!("\nTarget: ");
                     let target_input = ui::read_chess_position();
 
                     match chess_match.perform_chess_move(source_input, target_input) {
-                        Ok(_) => {
-                            break; // Movimento válido, sai do loop do turno.
-                        }
+                        Ok(_) => break, // movimento válido
                         Err(e) => {
                             println!("\nError: {}", e);
                             println!("Please try again, starting from the source position.");
@@ -52,12 +50,13 @@ fn main() {
                     pause_for_user();
                 }
             }
+
             ui::clear_screen();
             ui::print_match(&chess_match);
         }
     }
-    
-    // O jogo acabou. Mostra o resultado final.
+
+    // Fim da partida
     ui::clear_screen();
     ui::print_match(&chess_match);
 }
