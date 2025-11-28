@@ -8,7 +8,6 @@ mod server;
 mod client;
 
 use std::env;
-use chess::color::Color;
 
 #[tokio::main]
 async fn main() {
@@ -32,24 +31,10 @@ async fn main() {
             }
         }
         "client" => {
-            if args.len() < 3 {
-                println!("Please specify color: 'white' or 'black'");
-                return;
-            }
-            let color_str = &args[2].to_lowercase();
-            let color = match color_str.as_str() {
-                "white" => Color::White,
-                "black" => Color::Black,
-                _ => {
-                    println!("Invalid color. Use 'white' or 'black'.");
-                    return;
-                }
-            };
-            
-            // O endereço para o cliente é o 4º argumento (índice 3) ou default
-            let addr = if args.len() > 3 { &args[3] } else { "127.0.0.1:8080" };
-            
-            if let Err(e) = client::run_client_with_color(addr, color).await {
+            // Cliente agora solicita partida ao servidor — não precisa mais de cor no CLI
+            let addr = if args.len() > 2 { &args[2] } else { "127.0.0.1:8080" };
+
+            if let Err(e) = client::run_client(addr).await {
                 eprintln!("Client error: {}", e);
             }
         }

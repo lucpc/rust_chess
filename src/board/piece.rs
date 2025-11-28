@@ -3,7 +3,7 @@ use crate::board::Board;
 use crate::chess::{color::Color, ChessMatch};
 use std::fmt;
 
-pub trait Piece: fmt::Display {
+pub trait Piece: fmt::Display + Send + Sync {
     fn color(&self) -> Color;
     fn move_count(&self) -> u32;
     fn increase_move_count(&mut self);
@@ -15,10 +15,10 @@ pub trait Piece: fmt::Display {
         board.piece(position).map_or(false, |p| p.color() != self.color())
     }
 
-    fn box_clone(&self) -> Box<dyn Piece>;
+    fn box_clone(&self) -> Box<dyn Piece + Send + Sync>;
 }
 
-impl Clone for Box<dyn Piece> {
+impl Clone for Box<dyn Piece + Send + Sync> {
     fn clone(&self) -> Self {
         self.box_clone()
     }

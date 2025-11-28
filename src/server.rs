@@ -11,66 +11,37 @@ pub async fn run_server(addr: &str) -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(addr).await?;
     println!("Server listening on {}", addr);
 
-    // Estado compartilhado do jogo
-    let chess_match = Arc::new(Mutex::new(ChessMatch::new()));
-    
-    // Aceita conexão do Jogador 1 (Brancas)
-    println!("Waiting for Player 1 (White)...");
-    let (mut socket_white, _) = listener.accept().await?;
-    println!("Player 1 connected!");
+    println!("Server listening on {}", addr);
 
-    // Aceita conexão do Jogador 2 (Pretas)
-    println!("Waiting for Player 2 (Black)...");
-    let (mut socket_black, _) = listener.accept().await?;
-    println!("Player 2 connected!");
+    // slot de espera para matchmaking: guardamos um socket esperando por oponente
+    let waiting: Arc<Mutex<Option<tokio::net::TcpStream>>> = Arc::new(Mutex::new(None));
 
-    // Loop principal
     loop {
-        let game = chess_match.lock().await;
-        let current_turn = game.get_current_player();
-        
-        // Prepara mensagem de estado
-        let msg = game.to_game_state("".to_string());
-        let serialized_msg = serde_json::to_string(&msg).unwrap();
+        let (socket, peer) = listener.accept().await?;
+        println!("New client connected: {:?}", peer);
 
-        // Envia estado para ambos
-        send_packet(&mut socket_white, &serialized_msg).await?;
-        send_packet(&mut socket_black, &serialized_msg).await?;
+        let waiting_clone = waiting.clone();
 
-        // Verifica Game Over
-        if game.check_mate {
-            println!("Checkmate! Winner: {:?}", current_turn);
-            break; 
-        }
-
-        // Drop lock para permitir que aguardemos I/O
-        drop(game);
-
-        // Aguarda jogada do jogador da vez
-        let move_result = if current_turn == Color::White {
-             read_packet(&mut socket_white).await?
+        // Tenta parear imediatamente: se houver um jogador esperando, pegue-o e crie uma partida
+        let mut slot = waiting_clone.lock().await;
+        if slot.is_none() {
+            // Não há adversário: mande WaitingForOpponent e guarde o socket
+            let mut s = socket;
+            let waiting_msg = serde_json::to_string(&GameMessage::WaitingForOpponent).unwrap();
+            let _ = send_packet(&mut s, &waiting_msg).await;
+            *slot = Some(s);
+            println!("Player stored in waiting slot — waiting opponent...");
         } else {
-             read_packet(&mut socket_black).await?
-        };
+            // Há alguém esperando: retire e crie uma partida
+            let opponent = slot.take().unwrap();
+            println!("Starting a new match between two players...");
 
-        let request: GameMessage = serde_json::from_str(&move_result)?;
-
-        if let GameMessage::MakeMove { source, target } = request {
-            let mut game = chess_match.lock().await;
-            
-            // Tenta processar o movimento
-            let s_pos = ChessPosition::from_str(&source);
-            let t_pos = ChessPosition::from_str(&target);
-            
-            if let (Ok(s), Ok(t)) = (s_pos, t_pos) {
-                match game.perform_chess_move(s, t) {
-                    Ok(_) => println!("Move performed: {} -> {}", source, target),
-                    Err(e) => {
-                        // Envia erro apenas para o jogador atual (implementação simplificada envia estado atualizado com erro na próxima iteração)
-                        println!("Invalid move attempted: {}", e);
-                    }
+            // Spawn uma task para rodar a partida sem bloquear o accept loop
+            tokio::spawn(async move {
+                if let Err(e) = run_match(opponent, socket).await {
+                    eprintln!("Match error: {}", e);
                 }
-            }
+            });
         }
     }
     Ok(())
@@ -88,4 +59,77 @@ async fn read_packet(socket: &mut tokio::net::TcpStream) -> Result<String, std::
     let mut buf = vec![0u8; len as usize];
     socket.read_exact(&mut buf).await?;
     Ok(String::from_utf8_lossy(&buf).to_string())
+}
+
+// Executa o ciclo de jogo para duas conexões — conecta o loop do jogo, envia mensagens e processa jogadas.
+async fn run_match(mut socket_a: tokio::net::TcpStream, mut socket_b: tokio::net::TcpStream) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // Decide as cores: A = White, B = Black
+    let assign_a = serde_json::to_string(&GameMessage::AssignColor(Color::White)).unwrap();
+    let assign_b = serde_json::to_string(&GameMessage::AssignColor(Color::Black)).unwrap();
+
+    let _ = send_packet(&mut socket_a, &assign_a).await;
+    let _ = send_packet(&mut socket_b, &assign_b).await;
+
+    let mut chess_match = ChessMatch::new();
+
+    loop {
+        let current_turn = chess_match.get_current_player();
+
+        // Envia estado para ambos os jogadores
+        let state_msg = chess_match.to_game_state("".to_string());
+        let serialized = serde_json::to_string(&state_msg).unwrap();
+        if let Err(e) = send_packet(&mut socket_a, &serialized).await { eprintln!("Error sending state to A: {}", e); break; }
+        if let Err(e) = send_packet(&mut socket_b, &serialized).await { eprintln!("Error sending state to B: {}", e); break; }
+
+        if chess_match.check_mate {
+            println!("Match finished (checkmate). Winner: {:?}", current_turn);
+            let game_end = serde_json::to_string(&GameMessage::GameEnd { winner: Some(current_turn) }).unwrap();
+            let _ = send_packet(&mut socket_a, &game_end).await;
+            let _ = send_packet(&mut socket_b, &game_end).await;
+            break;
+        }
+
+        // Aguarda jogada do jogador da vez
+        let result = if current_turn == Color::White {
+            read_packet(&mut socket_a).await
+        } else {
+            read_packet(&mut socket_b).await
+        };
+
+        let move_json = match result {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("Read error (player disconnected?): {}", e);
+                // avisa o outro player que jogo terminou
+                let _ = send_packet(&mut socket_a, &serde_json::to_string(&GameMessage::GameEnd { winner: None }).unwrap()).await;
+                let _ = send_packet(&mut socket_b, &serde_json::to_string(&GameMessage::GameEnd { winner: None }).unwrap()).await;
+                break;
+            }
+        };
+
+        let request: GameMessage = serde_json::from_str(&move_json)?;
+
+        if let GameMessage::MakeMove { source, target } = request {
+            // Tenta aplicar o movimento
+            let s_pos = ChessPosition::from_str(&source);
+            let t_pos = ChessPosition::from_str(&target);
+
+            if let (Ok(s), Ok(t)) = (s_pos, t_pos) {
+                match chess_match.perform_chess_move(s, t) {
+                    Ok(_) => println!("Move in match: {} -> {}", source, target),
+                    Err(e) => {
+                        // Envia erro para o jogador da vez
+                        let err_msg = serde_json::to_string(&GameMessage::Error(e.0)).unwrap();
+                        if current_turn == Color::White {
+                            let _ = send_packet(&mut socket_a, &err_msg).await;
+                        } else {
+                            let _ = send_packet(&mut socket_b, &err_msg).await;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
