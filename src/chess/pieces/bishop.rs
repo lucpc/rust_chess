@@ -25,7 +25,7 @@ impl Piece for Bishop {
     fn move_count(&self) -> u32 { self.move_count }
     fn increase_move_count(&mut self) { self.move_count += 1; }
     fn decrease_move_count(&mut self) { self.move_count -= 1; }
-    fn box_clone(&self) -> Box<dyn Piece> { Box::new(self.clone()) }
+    fn box_clone(&self) -> Box<dyn Piece + Send + Sync> { Box::new(self.clone()) }
 
     fn possible_moves(&self, board: &Board, pos: Position, _: &ChessMatch) -> Vec<Vec<bool>> {
         let mut mat = vec![vec![false; board.cols]; board.rows];

@@ -22,7 +22,7 @@ pub struct ChessMatch {
     pub check_mate: bool,
     en_passant_vulnerable: Option<Position>,
     pieces_on_board: HashSet<Position>,
-    pub captured_pieces: Vec<Box<dyn Piece>>,
+    pub captured_pieces: Vec<Box<dyn Piece + Send + Sync>>,
 }
 
 impl ChessMatch {
@@ -97,7 +97,7 @@ impl ChessMatch {
         &mut self,
         source: ChessPosition,
         target: ChessPosition,
-    ) -> Result<Option<Box<dyn Piece>>, ChessError> {
+    ) -> Result<Option<Box<dyn Piece + Send + Sync>>, ChessError> {
         // ... (Código original aqui)
         let source_pos = source.to_position();
         let target_pos = target.to_position();
@@ -158,7 +158,7 @@ impl ChessMatch {
         Ok(())
     }
 
-    fn make_move(&mut self, source: Position, target: Position) -> Option<Box<dyn Piece>> {
+    fn make_move(&mut self, source: Position, target: Position) -> Option<Box<dyn Piece + Send + Sync>> {
         // ... (Mesma lógica do original)
         let mut piece = self.board.remove_piece(source).unwrap();
         piece.increase_move_count();
@@ -220,11 +220,11 @@ impl ChessMatch {
         captured_piece
     }
 
-fn undo_move(
+    fn undo_move(
         &mut self,
         source: Position,
         target: Position,
-        captured_piece: Option<Box<dyn Piece>>,
+        captured_piece: Option<Box<dyn Piece + Send + Sync>>,
     ) {
         // 1. Move a peça principal de volta (Target -> Source)
         let mut piece = self.board.remove_piece(target).unwrap();
@@ -377,7 +377,7 @@ fn undo_move(
     }
     
     // ... initial_setup e place_new_piece mantidos iguais
-    fn place_new_piece(&mut self, pos: ChessPosition, piece: Box<dyn Piece>) {
+    fn place_new_piece(&mut self, pos: ChessPosition, piece: Box<dyn Piece + Send + Sync>) {
         let board_pos = pos.to_position();
         self.board.place_piece(piece, board_pos).unwrap();
         self.pieces_on_board.insert(board_pos);

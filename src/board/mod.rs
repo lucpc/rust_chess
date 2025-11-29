@@ -8,7 +8,7 @@ use crate::error::ChessError;
 pub struct Board {
     pub rows: usize,
     pub cols: usize,
-    pieces: Vec<Vec<Option<Box<dyn Piece>>>>,
+    pieces: Vec<Vec<Option<Box<dyn Piece + Send + Sync>>>>,
 }
 
 impl Board {
@@ -20,14 +20,14 @@ impl Board {
         Ok(Board { rows, cols, pieces })
     }
 
-    pub fn piece(&self, position: Position) -> Option<&Box<dyn Piece>> {
+    pub fn piece(&self, position: Position) -> Option<&Box<dyn Piece + Send + Sync>> {
         if !self.position_exists(position) {
             panic!("Position not on the board");
         }
         self.pieces[position.row][position.col].as_ref()
     }
 
-    pub fn place_piece(&mut self, piece: Box<dyn Piece>, position: Position) -> Result<(), ChessError> {
+    pub fn place_piece(&mut self, piece: Box<dyn Piece + Send + Sync>, position: Position) -> Result<(), ChessError> {
         if self.there_is_a_piece(position) {
             return Err(ChessError(format!("There is already a piece on position {}", position)));
         }
@@ -35,7 +35,7 @@ impl Board {
         Ok(())
     }
 
-    pub fn remove_piece(&mut self, position: Position) -> Option<Box<dyn Piece>> {
+    pub fn remove_piece(&mut self, position: Position) -> Option<Box<dyn Piece + Send + Sync>> {
         if !self.position_exists(position) {
             panic!("Position not on the board");
         }
