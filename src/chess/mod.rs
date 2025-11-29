@@ -9,8 +9,6 @@ use self::chess_position::ChessPosition;
 use self::color::Color;
 use self::pieces::{bishop::Bishop, king::King, knight::Knight, pawn::Pawn, queen::Queen, rook::Rook};
 
-use std::collections::HashSet;
-
 /// Representa o estado completo de uma partida de xadrez.
 pub struct ChessMatch {
     pub board: Board,
@@ -19,7 +17,6 @@ pub struct ChessMatch {
     pub check: bool,
     pub check_mate: bool,
     en_passant_vulnerable: Option<Position>,
-    pieces_on_board: HashSet<Position>,
     pub captured_pieces: Vec<Box<dyn Piece>>,
 }
 
@@ -37,7 +34,6 @@ impl ChessMatch {
             check: false,
             check_mate: false,
             en_passant_vulnerable: None,
-            pieces_on_board: HashSet::new(),
             captured_pieces: Vec::new(),
         };
 
@@ -221,13 +217,9 @@ impl ChessMatch {
             .remove_piece(source)
             .expect("Invariante quebrada: esperado haver peça na origem ao mover");
         moving_piece.increase_move_count();
-        self.pieces_on_board.remove(&source);
 
         // Captura (se houver) na casa de destino
         let mut captured_piece = self.board.remove_piece(target);
-        if captured_piece.is_some() {
-            self.pieces_on_board.remove(&target);
-        }
 
         // Lida com captura en passant (peão movendo na diagonal sem peça aparente no destino)
         {
@@ -243,9 +235,6 @@ impl ChessMatch {
                 };
 
                 captured_piece = self.board.remove_piece(captured_pos);
-                if captured_piece.is_some() {
-                    self.pieces_on_board.remove(&captured_pos);
-                }
             }
         }
 
@@ -253,7 +242,6 @@ impl ChessMatch {
         self.board
             .place_piece(moving_piece, target)
             .expect("Invariante quebrada: falha ao colocar peça em posição destino");
-        self.pieces_on_board.insert(target);
 
         // Lida com roque (rei movendo duas casas)
         self.handle_castling(source, target);
@@ -324,31 +312,32 @@ impl ChessMatch {
 
     /// Verifica se um determinado lado está em xeque.
     fn test_check(&self, color: Color) -> bool {
-        // Se não achar o rei, consideramos que está em "estado inválido",
-        // e tratamos como xeque (situação extrema).
+        // Encontra o rei daquele color
         let king_pos = match self.king(color) {
             Some(pos) => pos,
-            None => return true,
+            None => {
+                // Se não tem rei, considere que é uma situação inválida / "em xeque".
+                return true;
+            }
         };
 
         let opponent = self.opponent(color);
 
-        let opponent_positions: Vec<Position> = self
-            .pieces_on_board
-            .iter()
-            .copied()
-            .filter(|&pos| {
-                self.board
-                    .piece(pos)
-                    .map(|p| p.color() == opponent)
-                    .unwrap_or(false)
-            })
-            .collect();
+        // Varrer o tabuleiro inteiro
+        for row in 0..self.board.rows {
+            for col in 0..self.board.cols {
+                let pos = Position::new(row, col);
 
-        for pos in opponent_positions {
-            let moves = self.calculate_possible_moves(pos);
-            if moves[king_pos.row][king_pos.col] {
-                return true;
+                if let Some(piece) = self.board.piece(pos) {
+                    if piece.color() != opponent {
+                        continue;
+                    }
+
+                    let moves = piece.possible_moves(&self.board, pos, self);
+                    if moves[king_pos.row][king_pos.col] {
+                        return true;
+                    }
+                }
             }
         }
 
@@ -368,30 +357,34 @@ impl ChessMatch {
             return false;
         }
 
-        let player_positions: Vec<Position> = self
-            .pieces_on_board
-            .iter()
-            .copied()
-            .filter(|&pos| {
-                self.board
-                    .piece(pos)
-                    .map(|p| p.color() == color)
-                    .unwrap_or(false)
-            })
-            .collect();
+        // Para cada peça do jogador
+        for row in 0..self.board.rows {
+            for col in 0..self.board.cols {
+                let source = Position::new(row, col);
 
-        for source_pos in player_positions {
-            let moves = self.calculate_possible_moves(source_pos);
+                let piece_opt = self.board.piece(source);
+                let piece = match piece_opt {
+                    Some(p) if p.color() == color => p,
+                    _ => continue,
+                };
 
-            for row in 0..self.board.rows {
-                for col in 0..self.board.cols {
-                    if moves[row][col] {
-                        let target_pos = Position::new(row, col);
-                        let captured = self.make_move(source_pos, target_pos);
+                let moves = piece.possible_moves(&self.board, source, self);
+
+                for r in 0..self.board.rows {
+                    for c in 0..self.board.cols {
+                        if !moves[r][c] {
+                            continue;
+                        }
+
+                        let target = Position::new(r, c);
+
+                        // Tenta a jogada hipotética
+                        let captured = self.make_move(source, target);
                         let still_in_check = self.test_check(color);
-                        self.undo_move(source_pos, target_pos, captured);
+                        self.undo_move(source, target, captured);
 
                         if !still_in_check {
+                            // Existe pelo menos uma jogada que tira do xeque
                             return false;
                         }
                     }
@@ -402,20 +395,21 @@ impl ChessMatch {
         true
     }
 
-    /// Procura a posição do rei de uma determinada cor.
+    /// Procura a posição do rei de uma determinada cor, varrendo o tabuleiro.
     fn king(&self, color: Color) -> Option<Position> {
-        self.pieces_on_board
-            .iter()
-            .copied()
-            .find(|&pos| {
+        for row in 0..self.board.rows {
+            for col in 0..self.board.cols {
+                let pos = Position::new(row, col);
                 if let Some(piece) = self.board.piece(pos) {
                     let display = piece.to_string();
                     let is_king_char = display.contains('♔') || display.contains('♚');
-                    is_king_char && piece.color() == color
-                } else {
-                    false
+                    if is_king_char && piece.color() == color {
+                        return Some(pos);
+                    }
                 }
-            })
+            }
+        }
+        None
     }
 
     fn opponent(&self, color: Color) -> Color {
@@ -430,13 +424,12 @@ impl ChessMatch {
         self.current_player = self.opponent(self.current_player);
     }
 
-    /// Coloca uma nova peça no tabuleiro e registra sua posição em `pieces_on_board`.
+    /// Coloca uma nova peça no tabuleiro na configuração inicial.
     fn place_new_piece(&mut self, pos: ChessPosition, piece: Box<dyn Piece>) {
         let board_pos = pos.to_position();
         self.board
             .place_piece(piece, board_pos)
             .expect("Invariante quebrada: falha ao posicionar nova peça");
-        self.pieces_on_board.insert(board_pos);
     }
 
     /// Configuração inicial padrão de uma partida de xadrez.
@@ -507,8 +500,6 @@ impl ChessMatch {
                 self.board
                     .place_piece(rook, rook_target)
                     .expect("Invariante quebrada: falha ao mover torre no roque pequeno");
-                self.pieces_on_board.remove(&rook_source);
-                self.pieces_on_board.insert(rook_target);
             }
         } else {
             // Roque grande
@@ -520,8 +511,6 @@ impl ChessMatch {
                 self.board
                     .place_piece(rook, rook_target)
                     .expect("Invariante quebrada: falha ao mover torre no roque grande");
-                self.pieces_on_board.remove(&rook_source);
-                self.pieces_on_board.insert(rook_target);
             }
         }
     }
