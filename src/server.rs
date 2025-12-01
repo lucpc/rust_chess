@@ -44,7 +44,6 @@ pub async fn run_server(addr: &str) -> Result<(), Box<dyn std::error::Error>> {
             });
         }
     }
-    Ok(())
 }
 
 async fn send_packet(socket: &mut tokio::net::TcpStream, msg: &str) -> Result<(), std::io::Error> {
