@@ -64,7 +64,7 @@ cargo run -- client 192.168.0.10:8080
 Execute o mesmo comando em outro terminal/computador:
 
 ```bash
-cargo run -- client
+cargo run -- client <IP>
 ```
 
 Assim que o segundo jogador conectar, o servidor iniciará a partida e atribuirá as cores (Branco e Preto) automaticamente.
