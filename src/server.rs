@@ -10,10 +10,8 @@ use std::sync::Arc;
 pub async fn run_server(addr: &str) -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(addr).await?;
     println!("Server listening on {}", addr);
+    println!("Waiting for players to connect...");
 
-    println!("Server listening on {}", addr);
-
-    // slot de espera para matchmaking: guardamos um socket esperando por oponente
     let waiting: Arc<Mutex<Option<tokio::net::TcpStream>>> = Arc::new(Mutex::new(None));
 
     loop {

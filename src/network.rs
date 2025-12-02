@@ -19,7 +19,9 @@ pub enum GameMessage {
         turn_color: Color,
         is_check: bool,
         is_check_mate: bool,
-        message: String 
+        message: String,
+        captured_by_white: Vec<PieceView>,
+        captured_by_black: Vec<PieceView>,
     },
     WaitingForOpponent,
     GameEnd { winner: Option<Color> },

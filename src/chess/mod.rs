@@ -67,12 +67,28 @@ impl ChessMatch {
             }
         }
 
+        // Separar peças capturadas por quem as capturou
+        let mut captured_by_white: Vec<PieceView> = Vec::new();
+        let mut captured_by_black: Vec<PieceView> = Vec::new();
+
+        for cp in &self.captured_pieces {
+            let pv = PieceView { symbol: cp.to_string(), color: cp.color() };
+            // Se a peça capturada é preta, foi capturada pelas brancas
+            if pv.color == Color::Black {
+                captured_by_white.push(pv);
+            } else {
+                captured_by_black.push(pv);
+            }
+        }
+
         GameMessage::GameState {
             board: board_view,
             turn_color: self.current_player,
             is_check: self.check,
             is_check_mate: self.check_mate,
             message,
+            captured_by_white,
+            captured_by_black,
         }
     }
 
