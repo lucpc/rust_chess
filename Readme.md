@@ -1,113 +1,102 @@
-# Projeto de Xadrez em Rust (Versão Console)
-
-Este é um projeto de xadrez completo, jogável via linha de comando, desenvolvido em Rust. Ele implementa as regras padrão do xadrez, incluindo detecção de xeque e xeque-mate, e foi criado como uma tradução de um projeto originalmente feito em Java.
+# Projeto de Xadrez em Rust (Versão Online/Console)
+Este é um projeto de xadrez completo, jogável via linha de comando, desenvolvido em Rust com suporte para partidas **Multiplayer Online** via TCP, mantendo a validação de regras, detecção de xeque/xeque-mate e movimentos especiais.
 
 ## Funcionalidades
 
-- **Interface Baseada em Texto:** Jogue uma partida de xadrez completa diretamente no seu terminal.
-- **Modo para Dois Jogadores:** Projetado para dois jogadores no mesmo computador ("hot-seat").
-- **Validação de Movimentos:** O sistema valida todos os movimentos de acordo com as regras do xadrez.
-- **Destaque de Movimentos:** Ao selecionar uma peça, o tabuleiro exibe todos os seus movimentos possíveis, facilitando a jogada.
-- **Detecção de Xeque e Xeque-Mate:** O jogo avisa quando um rei está em xeque e encerra a partida quando ocorre um xeque-mate, declarando o vencedor.
-- **Captura de Peças:** Mantém e exibe uma lista de todas as peças capturadas por cada jogador.
-- **Movimentos Especiais:** Implementa regras especiais como Roque (_Castling_) e _En Passant_.
+  - **Multiplayer Online:** Arquitetura Cliente-Servidor que permite que dois jogadores joguem através da rede (local ou internet).
+  - **Interface Baseada em Texto:** Jogue uma partida de xadrez completa diretamente no seu terminal com renderização colorida.
+  - **Lobby de Espera:** O primeiro jogador aguarda em um "lobby" até que um oponente se conecte.
+  - **Validação de Movimentos:** O servidor valida todos os movimentos de acordo com as regras do xadrez.
+  - **Destaque de Movimentos:** Ao selecionar uma peça, o cliente exibe os movimentos possíveis (validado pelo servidor/regras locais).
+  - **Detecção de Xeque e Xeque-Mate:** O jogo avisa quando um rei está em xeque e encerra a partida automaticamente.
+  - **Movimentos Especiais:** Implementa regras como Roque (*Castling*), *En Passant* e Promoção de Peão (automática para Rainha).
 
 ## Pré-requisitos
 
-Para compilar e executar este projeto, você precisará ter o **Rust** instalado em seu sistema. A instalação inclui o compilador (`rustc`) e o gerenciador de pacotes (`cargo`).
+Para compilar e executar este projeto, você precisará ter o **Rust** instalado em seu sistema.
 
-- A maneira recomendada de instalar o Rust é através do `rustup`. Você pode encontrar as instruções no site oficial: [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
+  - Instalação recomendada via `rustup`: [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
 
 ## Como Compilar e Executar
 
-1.  **Clone o Repositório** (ou simplesmente descompacte os arquivos em uma pasta):
+O jogo agora opera em dois modos: **Servidor** (que gerencia a partida) e **Cliente** (os jogadores).
 
-    ```bash
-    git clone https://github.com/lucpc/rust_chess
-    ```
+### 1\. Preparação
 
-2.  **Navegue até a Pasta do Projeto:**
+Clone o repositório e entre na pasta:
 
-    ```bash
-    cd nome-da-pasta-do-projeto
-    ```
+```bash
+git clone https://github.com/lucpc/rust_chess
+cd rust_chess
+```
 
-3.  **Compile e Execute o Jogo:**
-    Use o Cargo para compilar e rodar o projeto com um único comando. O Cargo irá baixar automaticamente as dependências (`colored`, `clearscreen`) na primeira vez.
-    ```bash
-    cargo run
-    ```
+### 2\. Iniciando o Servidor
 
-O jogo será iniciado no seu terminal.
+O servidor é responsável por conectar os dois jogadores e validar o estado do jogo. Execute-o primeiro:
+
+```bash
+# Inicia o servidor na porta padrão (127.0.0.1:8080)
+cargo run -- server
+
+# OU especifique um IP e Porta personalizados
+cargo run -- server 0.0.0.0:8080
+```
+
+*Nota: Se você quiser jogar com alguém fora da sua rede local, certifique-se de que a porta escolhida esteja aberta no seu roteador/firewall.*
+
+### 3\. Conectando os Jogadores (Clientes)
+
+Você precisará de dois terminais (janelas) adicionais para simular dois jogadores, ou dois computadores diferentes.
+
+**Jogador 1 (Entra na fila e aguarda):**
+
+```bash
+# Conecta ao servidor local (padrão)
+cargo run -- client
+
+# OU conecta a um IP específico (ex: IP do amigo)
+cargo run -- client 192.168.0.10:8080
+```
+
+*O Jogador 1 verá uma mensagem "Buscando adversário..." com uma animação.*
+
+**Jogador 2 (Conecta e inicia a partida):**
+Execute o mesmo comando em outro terminal/computador:
+
+```bash
+cargo run -- client
+```
+
+Assim que o segundo jogador conectar, o servidor iniciará a partida e atribuirá as cores (Branco e Preto) automaticamente.
 
 ## Como Jogar
 
-O jogo é controlado inteiramente por texto. Siga o fluxo abaixo para realizar suas jogadas.
+O jogo é controlado via texto. Siga o fluxo indicado no terminal:
 
-### 1. Entendendo o Tabuleiro
+1.  **Sua Vez:** O jogo avisará `YOUR TURN (Color)!`.
+2.  **Origem:** Digite a coordenada da peça que deseja mover (ex: `e2`) e pressione **Enter**.
+3.  **Destino:** Digite a coordenada de destino (ex: `e4`) e pressione **Enter**.
+4.  **Aguarde:** Enquanto o oponente joga, você verá a mensagem `Waiting for opponent...`.
 
-O tabuleiro é exibido com as coordenadas padrão do xadrez:
+### Notação e Regras
 
-- **Colunas:** `a` até `h`
-- **Linhas:** `1` até `8`
+  - **Coordenadas:** Use o formato algébrico padrão (`a1` até `h8`).
+  - **Roque:** Mova o Rei duas casas para o lado (ex: `e1` para `g1`).
+  - **En Passant:** Mova o peão para a casa vazia atrás do peão adversário capturado.
+  - **Vitória:** O jogo detecta automaticamente o Xeque-mate e declara o vencedor, encerrando a conexão.
 
-As peças brancas são representadas por letras maiúsculas (R, N, B, Q, K, P) na cor branca/cinza, e as peças pretas na cor amarela.
+## Estrutura do Projeto
 
-### 2. O Fluxo de uma Jogada
+  - **`server.rs`:** Gerencia conexões TCP e o estado da partida (`ChessMatch`).
+  - **`client.rs`:** Interface do usuário, envia comandos e renderiza o tabuleiro recebido do servidor.
+  - **`network.rs`:** Define o protocolo de comunicação (mensagens JSON) entre cliente e servidor.
+  - **`chess/`:** Lógica central do xadrez (tabuleiro, peças, regras).
 
-A cada turno, o jogo irá te guiar pelo processo de mover uma peça:
+## Dependências
 
-**Passo 1: Selecionar a Peça de Origem**
+O projeto utiliza as seguintes *crates*:
 
-O terminal irá mostrar de quem é a vez e solicitar a posição da peça que você deseja mover:
-
-```
-Turn : 1
-Waiting player: White
-
-Source: _
-```
-
-Digite a coordenada da sua peça (ex: `e2` para mover o peão do rei branco na primeira jogada) e pressione **Enter**.
-
-**Passo 2: Selecionar a Posição de Destino**
-
-Após inserir a origem, a tela será limpa e o tabuleiro será redesenhado. Todos os movimentos legais para a peça que você selecionou serão destacados com um **fundo azul**.
-
-O terminal então solicitará a posição de destino:
-
-```
-8 ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜ 
-7 ♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟ 
-6 - - - - - - - - 
-5 - - - - - - - - 
-4 - - - - - - - - 
-3 - - - - - - - - 
-2 ♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙ 
-1 ♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖ 
-  a b c d e f g h
-
-Target: _
-```
-
-_(Neste exemplo, imagine que os movimentos possíveis da peça `e2` estão com fundo azul)_
-
-Digite a coordenada para onde você deseja mover a peça (ex: `e4`) e pressione **Enter**.
-
-**Passo 3: Fim do Turno**
-
-Se o movimento for válido, a peça será movida, o tabuleiro será atualizado e o turno passará para o próximo jogador. O ciclo então se repete.
-
-### 3. Notação de Posição
-
-Use a notação de xadrez padrão (notação algébrica) para inserir as posições:
-
-- Formato: `[letra da coluna][número da linha]`
-- Exemplos: `a1`, `h8`, `f5`.
-- Não use espaços e digite em letras minúsculas.
-
-### 4. Movimentos Especiais
-
-- **Roque (Castling):** Para fazer o roque, simplesmente mova o seu Rei duas casas para o lado desejado (ex: de `e1` para `g1`). O jogo moverá a Torre automaticamente para a posição correta.
-- **En Passant:** A captura _en passant_ é realizada movendo seu peão na diagonal para a casa vazia atrás do peão adversário que acabou de avançar duas casas.
-- **Promoção de Peão:** Quando um peão alcança a última fileira do tabuleiro, ele é promovido **automaticamente a uma Rainha (Queen)**.
+  - `tokio`: Para rede assíncrona (TCP).
+  - `serde` / `serde_json`: Para serialização das mensagens de rede.
+  - `colored`: Para colorir o terminal.
+  - `clearscreen`: Para limpar a tela entre os turnos.
