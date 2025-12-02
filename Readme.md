@@ -19,7 +19,7 @@ Para compilar e executar este projeto, você precisará ter o **Rust** instalado
 
 ## Como Compilar e Executar
 
-O jogo agora opera em dois modos: **Servidor** (que gerencia a partida) e **Cliente** (os jogadores).
+O jogo opera em dois modos: **Servidor** (que gerencia a partida) e **Cliente** (os jogadores).
 
 ### 1\. Preparação
 
