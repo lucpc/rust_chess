@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize}; // <-- Importante: Importar isso
+use serde::{Deserialize, Serialize}; 
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)] // <-- Adicionar Serialize e Deserialize aqui
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)] 
 pub enum Color {
     Black,
     White,

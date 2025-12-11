@@ -13,7 +13,6 @@ use pieces::{
 use std::collections::HashSet;
 use crate::network::{GameMessage, PieceView}; // Importar
 
-// ... (Mantenha a struct ChessMatch igual)
 pub struct ChessMatch {
     pub board: Board,
     turn: u32,
@@ -26,9 +25,7 @@ pub struct ChessMatch {
 }
 
 impl ChessMatch {
-    // ... (Mantenha o método new e outros getters iguais)
     pub fn new() -> Self {
-        // ... (código existente)
         let mut chess_match = ChessMatch {
             board: Board::new(8, 8).unwrap(),
             turn: 1,
@@ -51,7 +48,6 @@ impl ChessMatch {
         self.en_passant_vulnerable
     }
 
-    // ADICIONE ESTE MÉTODO NOVO
     pub fn to_game_state(&self, message: String) -> GameMessage {
         let mut board_view = vec![vec![None; 8]; 8];
         
@@ -92,12 +88,6 @@ impl ChessMatch {
         }
     }
 
-    // ... (Mantenha calculate_possible_moves, possible_moves, etc. iguais)
-    // Certifique-se de que perform_chess_move seja 'pub' (já é no seu código original)
-    
-    // IMPORTANTE: Copie todo o resto da lógica original (perform_chess_move, validate..., make_move, etc.)
-    // Como o arquivo é grande, estou mostrando apenas onde inserir o novo método.
-    // O restante do arquivo permanece IDÊNTICO ao original.
     
     fn calculate_possible_moves(&self, source_position: Position) -> Vec<Vec<bool>> {
         self.board
@@ -106,15 +96,11 @@ impl ChessMatch {
             .possible_moves(&self.board, source_position, self)
     }
 
-    // ... (restante do código original omitido para brevidade, mantenha-o!)
-    
-    // Apenas para garantir que o compilador não reclame, vou replicar as assinaturas necessárias:
     pub fn perform_chess_move(
         &mut self,
         source: ChessPosition,
         target: ChessPosition,
     ) -> Result<Option<Box<dyn Piece + Send + Sync>>, ChessError> {
-        // ... (Código original aqui)
         let source_pos = source.to_position();
         let target_pos = target.to_position();
 
@@ -152,7 +138,6 @@ impl ChessMatch {
         Ok(captured_piece)
     }
     
-    // ... Mantenha as funções privadas auxiliares (validate_source, validate_target, make_move, etc.)
     fn validate_source_position(&self, pos: Position) -> Result<(), ChessError> {
         if let Some(piece) = self.board.piece(pos) {
             if self.current_player != piece.color() {
@@ -175,7 +160,6 @@ impl ChessMatch {
     }
 
     fn make_move(&mut self, source: Position, target: Position) -> Option<Box<dyn Piece + Send + Sync>> {
-        // ... (Mesma lógica do original)
         let mut piece = self.board.remove_piece(source).unwrap();
         piece.increase_move_count();
         self.pieces_on_board.remove(&source);
@@ -202,12 +186,10 @@ impl ChessMatch {
         self.board.place_piece(piece, target).unwrap();
         self.pieces_on_board.insert(target);
         
-        // Castling logic (resumida para manter concisão, use a original completa)
         if let Some(moved_piece) = self.board.piece(target) {
              let moved_piece_display = moved_piece.to_string();
              if moved_piece_display.contains('♔') || moved_piece_display.contains('♚') {
                 if (target.col as isize - source.col as isize).abs() == 2 {
-                    // Implementação do roque igual ao original...
                     if target.col > source.col {
                         let rook_source = Position::new(source.row, source.col + 3);
                         let rook_target = Position::new(source.row, source.col + 1);
@@ -247,18 +229,15 @@ impl ChessMatch {
         piece.decrease_move_count();
         self.board.place_piece(piece, source).unwrap();
         
-        // CORREÇÃO: Atualizar o HashSet pieces_on_board
         self.pieces_on_board.remove(&target);
         self.pieces_on_board.insert(source);
 
-        // 2. Restaurar peça capturada (se houver)
         if let Some(cp) = captured_piece {
             let color = cp.color();
             let cp_display = cp.to_string();
             let is_pawn = cp_display.contains('♟') || cp_display.contains('♙');
             
             let mut is_en_passant_capture = false;
-            // Verificamos a peça que acabamos de mover de volta para source
             if let Some(p) = self.board.piece(source) {
                 let p_display = p.to_string();
                 if (p_display.contains('♟') || p_display.contains('♙')) && target.col != source.col {
@@ -278,12 +257,9 @@ impl ChessMatch {
 
             self.board.place_piece(cp, place_pos).unwrap();
             self.captured_pieces.pop();
-            
-            // CORREÇÃO: Reinserir a peça capturada no HashSet
             self.pieces_on_board.insert(place_pos);
         }
 
-        // 3. Desfazer Roque (se necessário)
         if let Some(moved_piece) = self.board.piece(source) {
             let moved_piece_display = moved_piece.to_string();
             if moved_piece_display.contains('♔') || moved_piece_display.contains('♚') {
@@ -297,19 +273,15 @@ impl ChessMatch {
                         rook.decrease_move_count();
                         self.board.place_piece(rook, rook_target).unwrap();
 
-                        // CORREÇÃO: Atualizar posições da torre
                         self.pieces_on_board.remove(&rook_source);
                         self.pieces_on_board.insert(rook_target);
                     } else {
-                        // Roque Grande (lado da Rainha)
                         let rook_source = Position::new(source.row, source.col - 1);
                         let rook_target = Position::new(source.row, source.col - 4);
                         
                         let mut rook = self.board.remove_piece(rook_source).unwrap();
                         rook.decrease_move_count();
                         self.board.place_piece(rook, rook_target).unwrap();
-
-                        // CORREÇÃO: Atualizar posições da torre
                         self.pieces_on_board.remove(&rook_source);
                         self.pieces_on_board.insert(rook_target);
                     }
@@ -318,11 +290,9 @@ impl ChessMatch {
         }
     } 
     fn test_check(&self, color: Color) -> bool {
-        // ... (Mesma lógica do original)
         let king_pos = self.king(color);
         if king_pos.is_none() { return true; }
         let king_pos = king_pos.unwrap();
-
         let opponent = self.opponent(color);
         let opponent_pieces = self
             .pieces_on_board
@@ -343,9 +313,7 @@ impl ChessMatch {
     }
 
     fn test_check_mate(&mut self, color: Color) -> bool {
-         // ... (Mesma lógica do original)
         if !self.test_check(color) { return false; }
-
         let player_pieces = self
             .pieces_on_board
             .iter()
@@ -392,7 +360,6 @@ impl ChessMatch {
         self.current_player = self.opponent(self.current_player);
     }
     
-    // ... initial_setup e place_new_piece mantidos iguais
     fn place_new_piece(&mut self, pos: ChessPosition, piece: Box<dyn Piece + Send + Sync>) {
         let board_pos = pos.to_position();
         self.board.place_piece(piece, board_pos).unwrap();
@@ -400,8 +367,6 @@ impl ChessMatch {
     }
 
     fn initial_setup(&mut self) {
-         // ... Copie o conteúdo exato do seu initial_setup original aqui ...
-         // --- PEÇAS BRANCAS (LINHAS 1 E 2) ---
         self.place_new_piece(ChessPosition::new('a', 1).unwrap(),Box::new(Rook::new(Color::White)));
         self.place_new_piece(ChessPosition::new('b', 1).unwrap(),Box::new(Knight::new(Color::White)));
         self.place_new_piece(ChessPosition::new('c', 1).unwrap(),Box::new(Bishop::new(Color::White)));
